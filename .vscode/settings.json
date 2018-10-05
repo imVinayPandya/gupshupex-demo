@@ -1,0 +1,13 @@
+{
+  "files.exclude": {
+    "**/_build": true,
+    "**/.DS_Store": true,
+    "**/.elixir_ls": true,
+    "**/.git": true,
+    "**/.hg": true,
+    "**/.svn": true,
+    "**/.vscode": true,
+    "**/CVS": true,
+    "**/deps": true
+  },
+}
