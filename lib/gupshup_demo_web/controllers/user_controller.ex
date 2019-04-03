@@ -1,11 +1,13 @@
 defmodule GupshupDemoWeb.UserController do
   use GupshupDemoWeb, :controller
+  use Task
 
   import SweetXml
   import XmlBuilder
 
   alias GupshupDemo.Auth
   alias GupshupDemo.Auth.User
+  alias GupshupDemoWeb.WalkinsApi
 
   action_fallback(GupshupDemoWeb.FallbackController)
 
@@ -60,6 +62,37 @@ defmodule GupshupDemoWeb.UserController do
     end
   end
 
+  def optin_sms_response(list \\ [], cause_id, response_acc \\ "")
+  def optin_sms_response([mobile | tail], cause_id, response_acc) do
+    transaction_id = cause_id <> "-" <> gen_cause_id(18)
+    response_acc = response_acc <> "success|" <> mobile <> "|" <> transaction_id <> "\n"
+    optin_sms_response(tail, cause_id, response_acc)
+  end
+  def optin_sms_response([], _cause_id,response_acc), do: response_acc |> String.slice(0..-2)
+
+  def optin_sms(conn, %{}) do
+    IO.puts "OPTIN Message"
+
+    cause_id = gen_cause_id(19)
+    mobile = conn.query_params["send_to"]
+    piped_mobile_numbers = mobile |> String.split("|", trim: true)
+    comma_mobile_numbers = mobile |> String.split("''", trim: true)
+    piped_mobile_length = piped_mobile_numbers |> length
+    comma_mobile_length = comma_mobile_numbers |> length
+
+    response_data = cond do
+      piped_mobile_length > 1 ->
+        optin_sms_response(piped_mobile_numbers, cause_id)
+      comma_mobile_length > 1 ->
+        optin_sms_response(comma_mobile_numbers, cause_id)
+      true ->
+        transaction_id = cause_id <> "-" <> gen_cause_id(18)
+        "success|" <> mobile <> "|" <> transaction_id
+    end
+
+    text(conn, response_data)
+  end
+
   def xml_parse(conn, %{xml: doc}) do
     # result =
     #   doc
@@ -91,7 +124,8 @@ defmodule GupshupDemoWeb.UserController do
     length: #{length(result)}, cause_id: #{cause_id}
     """)
 
-    spawn(fn -> call_walkins_api(cause_id, result) end)
+    # spawn(fn -> call_walkins_api(cause_id, result) end)
+    call_walkins_api(cause_id, result)
 
     # response = %{
     #   item: %{
@@ -133,10 +167,6 @@ defmodule GupshupDemoWeb.UserController do
   end
 
   defp call_walkins_api(cause_id, [head | tail] = smsList) when length(smsList) > 0 do
-    # IO.puts("""
-    # length: #{length(smsList)}, cause_id: #{cause_id}
-    # """)
-
     # IO.inspect(head)
 
     external_id = cause_id <> "-" <> gen_cause_id(18)
@@ -158,12 +188,38 @@ defmodule GupshupDemoWeb.UserController do
     end
 
     # HTTPoison.get!("http://localhost:9090/", %{}, params: params)
+    WalkinsApi.start_link(params)
 
-    HTTPoison.get!("http://192.168.4.7:3001/realtime-sms-report-callback-sqs", %{}, params: params)
-    spawn(fn -> call_walkins_api(cause_id, tail) end)
+    call_walkins_api(cause_id, tail)
   end
 
   defp call_walkins_api(_cause_id, _smsList) do
     IO.puts("........ LOOP COMPLETED ........")
   end
+
+end
+
+defmodule GupshupDemoWeb.WalkinsApi do
+  use Task
+
+  def start_link(arg) do
+    Task.start_link(__MODULE__, :run, [arg])
+  end
+
+  def run(arg) do
+    url = "http://3.82.249.139:3001/realtime-sms-report-callback-sqs"
+
+    case HTTPoison.get(url, %{}, params: arg) do
+      {:ok, %HTTPoison.Response{status_code: 200, body: _body}} ->
+        IO.inspect """
+        #{"Sucess"} #{DateTime.utc_now}
+        """
+      {:ok, %HTTPoison.Response{status_code: 404}} ->
+        IO.puts "Not found :("
+      {:error, %HTTPoison.Error{reason: reason}} ->
+        IO.inspect reason
+        IO.inspect arg
+    end
+  end
+
 end

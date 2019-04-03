@@ -11,7 +11,8 @@ defmodule GupshupDemo.Application do
       # Start the Ecto repository
       supervisor(GupshupDemo.Repo, []),
       # Start the endpoint when the application starts
-      supervisor(GupshupDemoWeb.Endpoint, [])
+      supervisor(GupshupDemoWeb.Endpoint, []),
+      supervisor(Task.Supervisor, [[name: GupshupDemoWeb.WalkinsApi]])
       # Start your own worker by calling: GupshupDemo.Worker.start_link(arg1, arg2, arg3)
       # worker(GupshupDemo.Worker, [arg1, arg2, arg3]),
     ]

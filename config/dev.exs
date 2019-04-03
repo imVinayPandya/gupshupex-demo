@@ -42,5 +42,5 @@ config :gupshup_demo, GupshupDemo.Repo,
   username: "vinay",
   password: "123",
   database: "gupshup_demo_dev",
-  hostname: "localhost",
+  hostname: "0.0.0.0",
   pool_size: 10

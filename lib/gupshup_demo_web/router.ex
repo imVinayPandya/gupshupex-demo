@@ -14,6 +14,7 @@ defmodule GupshupDemoWeb.Router do
     pipe_through(:api)
     post("/users/sign_in", UserController, :sign_in)
     post("/xml", UserController, :xml_parse)
+    get("/rest", UserController, :optin_sms)
   end
 
 
