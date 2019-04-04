@@ -1,5 +1,8 @@
 # GupshupDemo
 
+First install elixir from the following link.
+[`install elixir`](https://elixir-lang.org/install.html)
+
 To start your Phoenix server:
 
   * Install dependencies with `mix deps.get`
